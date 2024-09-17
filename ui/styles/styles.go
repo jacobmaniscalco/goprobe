@@ -5,17 +5,17 @@ import "github.com/charmbracelet/lipgloss"
 
 var WarningStyle = lipgloss.NewStyle().
 		   Bold(true).
-		   Foreground(lipgloss.Color("#FF0000"))
+		   Foreground(lipgloss.Color("160"))
 
 
 var IPStyle = lipgloss.NewStyle().
-	      Bold(true).
-              Foreground(lipgloss.Color("#00FF00"))
+              Foreground(lipgloss.Color("47")).
+	      Padding(0, 1)
 
 
 var OSStyle = lipgloss.NewStyle().
 	      Italic(true).
-	      Foreground(lipgloss.Color("4")).
+	      Foreground(lipgloss.Color("23")).
 	      Padding(0, 1)
 
 var HeaderStyle = lipgloss.NewStyle().
@@ -35,6 +35,11 @@ var OddRowStyle = lipgloss.NewStyle().
 var TitleStyle = lipgloss.NewStyle().
 		 Bold(true).
 		 Foreground(lipgloss.Color("3")).
-		 Padding(0,1)
+		 Background(lipgloss.Color("black")).
+		 Padding(1,2).
+		 MarginBottom(2).
+		 Border(lipgloss.RoundedBorder()).
+		 Align(lipgloss.Center)
+		 
 
 
