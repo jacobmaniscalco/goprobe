@@ -103,32 +103,46 @@ func PerformScan(options ScanOptions) (string, error) {
 func formatScanResults(results *nmap.Run, warnings *[]string) string {
 
 	var sb strings.Builder
-
+	
 	if len(*warnings) > 0 {
 		sb.WriteString(styles.WarningStyle.Render(
-			fmt.Sprintf("run finished with warnings: %s\n", *warnings)))
+			fmt.Sprintf("run finished with warnings: %s", *warnings)) + "\n")
 	}
 
-	sb.WriteString(styles.TitleStyle.Render("Scan Results"))
-	sb.WriteString("\n")
+	sb.WriteString(styles.TitleStyle.Render(fmt.Sprintf("Scan Results")) + "\n")
 
+	sb.WriteString(fmt.Sprintf("Scan Time: %f seconds", results.Stats.Finished.Elapsed) + "\n")
+
+	if results.Stats.Hosts.Up == 0 {
+		sb.WriteString(fmt.Sprintf("No host is up."))
+		return sb.String()
+	} else {
+		sb.WriteString(fmt.Sprintf("%d host(s) ", results.Stats.Hosts.Up) +
+		styles.SuccessStyle.Render("up") +"\n\n")
+	}
+	
 	for _, host := range results.Hosts {
-		sb.WriteString(styles.IPStyle.Render(
-			fmt.Sprintf("Host: %s", host.Addresses[0].Addr)))
-		sb.WriteString("\n")
+
+		sb.WriteString(
+			fmt.Sprintf("Scan report for host:") +
+			styles.IPStyle.Render(fmt.Sprintf("%s", host.Addresses[0].Addr)) + "\n")
+
 
 		for _, match := range host.OS.Matches {
 			sb.WriteString(styles.OSStyle.Render(
-				fmt.Sprintf("OS Detected: %s %d%%", match.Name, match.Accuracy)))
+				fmt.Sprintf("OS Detected: %s %d%%", match.Name, match.Accuracy)) + "\n")
 		}
-		sb.WriteString("\n")
+
+		sb.WriteString(
+			fmt.Sprintf("Not shown %d port(s) closed", host.ExtraPorts[0].Count) + "\n")
 
 		var rows [][]string
 		for _, port := range host.Ports {
 			rows = append(rows, []string{
 				fmt.Sprintf("%d", port.ID),
 				fmt.Sprintf("%s", port.State),
-				fmt.Sprintf("%s", port.Service),
+				fmt.Sprintf("%s", port.Service.Name),
+				fmt.Sprintf("%s %s", port.Service.Product, port.Service.Version),
 			})
 		}
 
@@ -145,7 +159,7 @@ func formatScanResults(results *nmap.Run, warnings *[]string) string {
 					return styles.OddRowStyle
 				}
 			}).
-			Headers("Port", "State", "Service").
+			Headers("Port", "State", "Service", "Version").
 			Rows(rows...)
 
 		sb.WriteString(t.Render())
