@@ -68,7 +68,7 @@ func (m ScannerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m ScannerModel) View() string {
 
-	str := fmt.Sprintf("\n%s Scanning...\n\n", m.spinner.View())
+	str := fmt.Sprintf("\n%s Scanning Target(s)...\n\n", m.spinner.View())
 	
 	if m.quit {
 		return str + "\n"
