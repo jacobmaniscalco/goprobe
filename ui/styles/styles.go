@@ -7,9 +7,14 @@ var WarningStyle = lipgloss.NewStyle().
 		   Bold(true).
 		   Foreground(lipgloss.Color("160"))
 
+var SuccessStyle = lipgloss.NewStyle().
+		   Foreground(lipgloss.Color("#00ff00"))
+
+var FailStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("9"))
 
 var IPStyle = lipgloss.NewStyle().
-              Foreground(lipgloss.Color("47")).
+              Foreground(lipgloss.Color("129")).
 	      Padding(0, 1)
 
 
@@ -36,9 +41,6 @@ var TitleStyle = lipgloss.NewStyle().
 		 Bold(true).
 		 Foreground(lipgloss.Color("3")).
 		 Background(lipgloss.Color("black")).
-		 Padding(1,2).
-		 MarginBottom(2).
-		 Border(lipgloss.RoundedBorder()).
 		 Align(lipgloss.Center)
 		 
 
