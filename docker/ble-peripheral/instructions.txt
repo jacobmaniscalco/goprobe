@@ -1,0 +1,10 @@
+Run the following: 
+
+sudo docker run --rm -it --cap-add=NET_ADMIN -v /var/run/dbus/:/var/run/dbus/:z --net=host go-peripheral
+
+inside the container, run:
+
+service dbus start
+bluetoothd & 
+
+app/peripheral
