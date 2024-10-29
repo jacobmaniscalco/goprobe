@@ -3,7 +3,7 @@ package components
 import (
 	"fmt"
 
-	"github.com/jacobmaniscalco/blue-caterpillar-cli/internal/scan"
+	"github.com/jacobmaniscalco/goprobe/internal/scan"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
