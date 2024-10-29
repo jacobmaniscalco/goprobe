@@ -8,7 +8,11 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/jacobmaniscalco/goprobe/internal/attack"
+	ssh "github.com/jacobmaniscalco/goprobe/internal/attack/modules/ssh"
 )
+
+var attackOptions attack.AttackOptions 
 
 // attackCmd represents the attack command
 var attackCmd = &cobra.Command{
@@ -21,12 +25,22 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("attack called")
+		err := ssh.BruteForceSSH(attackOptions)
+		if err != nil {
+			fmt.Println(err)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(attackCmd)
+
+	attackCmd.Flags().StringVarP(&attackOptions.Host, "target", "t", "",
+	"Specify the target IP address or range of IP addresses to attack." +
+	"This can be a single IP, a subnet, or a list of IPs.")
+
+	attackCmd.Flags().StringVarP(&attackOptions.Port, "port", "p","22",
+	"Specify the port to attack") 
 
 	// Here you will define your flags and configuration settings.
 
