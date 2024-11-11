@@ -1,48 +1,66 @@
 package ble
 
-import (
-	"tinygo.org/x/bluetooth"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/pcap"
 
+import (
+	"bufio"
 	"fmt"
+	"strings"
+	"log"
+	"os/exec"
 )
 
-var adapter = bluetooth.DefaultAdapter
+type bleScanResults struct {
+	source string
+	destination string
+	rssi string
+}
 
-func must(action string, err error) {
+func BLE_scan(iface string) {
+	cmd := exec.Command("tshark", "-i", iface, "-T", "fields",
+	"-e", "_ws.col.Source",
+	"-e", "_ws.col.Destination",
+	"-e", "nordic_ble.rssi",
+	"-E", "separator=\t",
+	)
+
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		panic("failed to " + action + ":" + err.Error())
+		log.Fatalf("Failed to get stdout: %v", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		log.Fatalf("Failed to start tshark: %v", err)
+	}
+	defer cmd.Process.Kill()
+
+
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+		//line = strings.TrimSpace(line)
+		fields := strings.Split(line, "\t")
+
+		source := fields[0]
+		destination := fields[1]
+		rssi := fields[2]
+
+		fmt.Printf("Source: %s\nDestination: %v\nRssi: %s\n\n\n\n", 
+			source, destination, rssi)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Scanner error: %v", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		log.Fatalf("tshark command failed: %v", err)
 	}
 }
 
-func BLE_scan() {
-	//must("enable BLE stack", adapter.Enable())
-
-	//println("scanning...")
-
-	//addr, _ := adapter.Address()
-
-	//fmt.Println(addr)
-
-	//err := adapter.Scan(func(adapter *bluetooth.Adapter, device bluetooth.ScanResult) {
-	//	println("found device:", device.Address.String(), device.RSSI, device.LocalName())
-	//})
-	//must("start scan", err)
-	
-	interfaceName := "hci0"
-
-	handle, err := pcap.OpenLive(interfaceName, 1600, true, pcap.BlockForever)
-
-	if err != nil {
-		panic(err)
+func getFirstOrDefault(arr []string) string {
+	if len(arr) > 0 {
+		return arr[0]
 	}
 
-	defer handle.Close()
-
-	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	for packet := range packetSource.Packets() {
-		fmt.Println("Captured packet:", packet)
-	}
-
+	return "N/A"
 }
