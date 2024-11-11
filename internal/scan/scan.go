@@ -7,7 +7,7 @@ type scanDoneMsg struct {
 
 type ScanOptions struct {
 	 Host string 
-	 Ports []uint16
+	 Ports string
 	 Verbose bool
 	 Script string
 	 Timing string
