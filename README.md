@@ -6,48 +6,41 @@
 
 
 ## Overview
-GoProbe is a powerful and modular command-line tool designed to assess the security of a wide range of IoT (Internet of Things) devices. Built in Go, this tool provides security professionals and developers with an effective means to identify and report vulnerabilities across diverse IoT ecosystems, regardless of device type or application.
+
+GoProbe is a powerful, modular command-line tool designed to assess the security of Internet of Things (IoT) devices, specifically targeting vulnerabilities in two key communication protocols: Bluetooth Low Energy (BLE) and MQTT. Built in Go, this tool provides security professionals and developers with an effective means to identify and report protocol-specific vulnerabilities, especially in authentication mechanisms, across diverse IoT ecosystems.
 
 ## Project Goals
 
-* Versatile Scanning: Develop a CLI tool in Go for scanning and identifying vulnerabilities across various IoT devices.
-* Modular Design: Ensure the tool is modular, facilitating easy integration of new scanning modules and plugins.
+* Targeted Protocol Security: Focus on scanning and identifying vulnerabilities in BLE and MQTT, which are widely used in IoT devices.
+* In-Depth Vulnerability Analysis: Emphasize in-depth analysis of BLE and MQTT communication protocols, examining areas prone to insecure implementations.
+* Modular Design: Maintain a modular framework to facilitate the addition of future protocol analysis or vulnerability assessment modules.
 
 ## Core Functionalities
 
 * Device Discovery:
-    * Scan networks to identify connected IoT devices using protocols like ARP, mDNS, SSDP, and UPnP.
-    * Perform detailed service enumeration to identify running services and their versions.
-    * Classify devices based on type, manufacturer, and known vulnerabilities.
-    * Powered by the Ullaakut/nmap Go package.
+    Scan for BLE-enabled IoT devices and identify active MQTT connections.
+    Perform service enumeration on discovered devices to identify protocol usage and version information.
+    Classify devices based on type, manufacturer, and potential vulnerabilities.
 
-* Vulnerability Scanning:
-    * Utilize known vulnerabilities databases (e.g., CVEs) to detect existing security issues.
-    * Check configurations for weak or default settings and insecure firmware versions.
-    * Implement brute-force modules for common IoT services (e.g., SSH, Telnet) to test for weak credentials.
+* Protocol-Specific Vulnerability Scanning:
+    * Bluetooth Low Energy (BLE):
+        Identify vulnerabilities in BLE 4.0 and 4.1 authentication mechanisms, focusing on weaknesses in key exchange.
+        Utilize passive BLE sniffing for packet analysis, using the nRF52840 MDK USB Dongle and Wireshark with the Nordic nRF Sniffer.
+    * MQTT:
+        Analyze MQTT broker configurations and inspect for weak credentials or insecure authentication methods.
+        Test for open MQTT channels and lack of encryption or access control.
 
 * Protocol Analysis:
-    * Scan for outdated or insecure firmware versions.
-    * Detect the presence of hard-coded credentials and other common firmware vulnerabilities.
+    Detect the use of insecure configurations or outdated versions of BLE and MQTT protocols.
+    Identify insecure key exchange processes and other common vulnerabilities in BLE and MQTT implementations.
 
 * Reporting:
-    * Generate detailed reports in formats like JSON, XML, and PDF, outlining identified vulnerabilities and recommended actions.
-    * Offer both summary and detailed modes for varied analysis needs.
-
-## Advanced Features
-
-* Modular Plugin System:
-    * Enable users to develop and integrate custom scanning modules.
-    * Provide an API for adding new vulnerability checks or device types.
-
-* Automation & Scripting:
-    * Support integration with automation frameworks (e.g., Ansible, Jenkins) for routine scans.
-    * Allow creation of custom scripts for specialized scanning scenarios.
-
+    Generate detailed reports in formats like JSON and PDF, outlining identified protocol vulnerabilities and recommended mitigations.
+    Provide summary and detailed reporting options to cater to different levels of analysis requirements.
 
 ## Getting Started
 Instructions on how to install the tool will be added soon. In addition, a Dockerfile will be added with the necessary software to test 
-the tool with [IoTGoat](https://github.com/OWASP/IoTGoat) and [Damn Vulnerable IoT Device (DVID)](https://github.com/Vulcainreo/DVID)
+the tool and run the tool.
 
 ## License
 
