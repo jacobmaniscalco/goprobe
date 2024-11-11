@@ -13,6 +13,7 @@ import (
 
 var scanOptions scan.ScanOptions
 var ports string
+var iface string
 
 // scanCmd represents the scan command
 var ScanCmd = &cobra.Command{
@@ -28,7 +29,7 @@ var ScanCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 
-		ble.BLE_scan()
+		ble.BLE_scan(iface)
 		
 		//snmp.ScanSNMPDevice(scanOptions, 161)
 
@@ -55,11 +56,12 @@ var ScanCmd = &cobra.Command{
 
 func init() {
 
+	ScanCmd.Flags().StringVarP(&iface, "interface", "i", "", "Specify interface")
+
 	
 	ScanCmd.Flags().StringVarP(&scanOptions.Host, "target", "t", "",
 	"Specify the target IP address or range of IP addresses to be scanned.\n" + 
 	"This can be a single IP, a subnet, or a list of IPs.\n")
-	ScanCmd.MarkFlagRequired("target")
 
 	ScanCmd.Flags().StringVarP(&ports, "ports", "p", "", 
 	"Define which ports to scan on the target. You can specify a single port, \n" +
