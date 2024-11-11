@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jacobmaniscalco/goprobe/internal/scan"
+	"github.com/jacobmaniscalco/goprobe/internal/scan/nmap"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -22,7 +23,7 @@ type ScannerModel struct {
 	Err      error
 }
 
-func NewModel(scanOptions scan.ScanOptions) ScannerModel {
+func NewScannerModel(scanOptions scan.ScanOptions) ScannerModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -79,7 +80,7 @@ func (m ScannerModel) View() string {
 func startScan(scanOptions scan.ScanOptions) tea.Cmd {
 
 	return func() tea.Msg {
-		results, err := scan.PerformScan(scanOptions)
+		results, err := nmap.PerformScan(scanOptions)
 		if err != nil {
 			return scanResultMsg{result: "", err: err}
 		}
