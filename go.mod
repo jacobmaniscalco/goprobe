@@ -7,9 +7,9 @@ require (
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.0
 	github.com/charmbracelet/lipgloss v0.13.0
-	github.com/google/gopacket v1.1.19
 	github.com/gosnmp/gosnmp v1.38.0
 	github.com/spf13/cobra v1.8.1
+	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
 	golang.org/x/crypto v0.27.0
 	tinygo.org/x/bluetooth v0.10.0
 )
