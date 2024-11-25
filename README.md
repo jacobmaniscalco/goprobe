@@ -32,8 +32,7 @@ GoProbe is a powerful, modular command-line tool designed to assess the security
     Identify insecure key exchange processes and other common vulnerabilities in BLE implementations.
 
 ## Getting Started
-Instructions on how to install the tool will be added soon. In addition, a Dockerfile will be added with the necessary software to test 
-the tool and run the tool.
+Instructions on how to install the tool will be added soon. In addition, a Dockerfile will be added with the necessary software to test and run the tool.
 
 ## License
 
