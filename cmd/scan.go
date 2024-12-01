@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"github.com/jacobmaniscalco/goprobe/internal/scan"
 	"github.com/spf13/cobra"
 	"github.com/jacobmaniscalco/goprobe/internal/scan/ble"
 )
 
-var scanOptions scan.ScanOptions
-var ports string
 var macAddress string
 
 // scanCmd represents the scan command
@@ -29,5 +26,5 @@ var ScanCmd = &cobra.Command{
 
 func init() {
 
-	ScanCmd.Flags().StringVarP(&macAddress, "macAddress", "a", "", "Specify the MAC address of the device you are attempting to capture.")
+	ScanCmd.Flags().StringVarP(&macAddress, "macAddress", "m", "", "Specify the MAC address of the device you are attempting to capture.")
 }
